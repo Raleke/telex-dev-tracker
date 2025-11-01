@@ -97,11 +97,8 @@ app.post("/webhook/telex", async (req, res) => {
   // For compatibility, handle the incoming message shape Telex uses
   try {
     const incoming = req.body;
-    console.log("Received webhook body:", JSON.stringify(incoming, null, 2));
     const text = incoming.input || incoming.text || incoming.body?.text || "";
     const metadata = incoming.metadata || { channelId: incoming.channelId || incoming.from?.id, userId: incoming.userId };
-    console.log("Extracted text:", text);
-    console.log("Extracted metadata:", JSON.stringify(metadata, null, 2));
     // reuse same logic by forwarding to the A2A handler shape
     // simple call:
     const proxyRes = await fetchLocalA2A(text, metadata);
@@ -114,14 +111,11 @@ app.post("/webhook/telex", async (req, res) => {
 
 async function fetchLocalA2A(input: string, metadata: any) {
   // Reuse logic in the main a2a route without HTTP call
-  console.log("fetchLocalA2A called with input:", input, "metadata:", JSON.stringify(metadata, null, 2));
   const lower = String(input).trim().toLowerCase();
   const channelId = metadata?.channelId || process.env.DEFAULT_CHANNEL_ID;
   const userId = metadata?.userId;
-  console.log("Lower input:", lower);
   if (lower.startsWith("add task")) {
     const title = input.replace(/add task/i, "").trim();
-    console.log("Matched add task, title:", title);
     return { output: AgentLogic.addTask(title, undefined, channelId, userId) };
   }
   if (lower.startsWith("mark")) {
