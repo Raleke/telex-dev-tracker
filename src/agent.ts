@@ -119,23 +119,7 @@ export const AgentLogic = {
     return `Deleted ${info.changes} completed tasks`;
   },
 
-  detectIssue: (text: string) => {
-    // naive detection by keywords — can be extended
-    const keywords = ["error", "exception", "stacktrace", "crash", "failed", "bug", "panic"];
-    const lowered = text.toLowerCase();
-    const triggered = keywords.some(k => lowered.includes(k));
-    if (!triggered) return null;
 
-    // severity heuristics
-    const severity = lowered.includes("panic") || lowered.includes("crash") ? "critical"
-      : lowered.includes("error") || lowered.includes("exception") ? "high"
-      : "medium";
-    const db = getDb();
-    const stmt = db.prepare(`INSERT INTO issues (description, severity, detected_at) VALUES (?, ?, ?)`);
-    stmt.run(text, severity, new Date().toISOString());
-    db.close();
-    return ` Detected issue (severity: ${severity}). Logged to issue tracker.`;
-  },
 
   generateDailySummary: (channelId?: string) => {
     const db = getDb();

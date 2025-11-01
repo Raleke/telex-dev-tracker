@@ -4,6 +4,7 @@ import * as dotenv from "dotenv";
 import { logger } from "./logger.js";
 import { migrate } from "./db.js";
 import { AgentLogic } from "./agent.js";
+import { IssuesService } from "./services/issues.js";
 import { callMastraExternal } from "./mastraClient.js";
 import { startScheduler } from "./scheduler.js";
 import { generateDailySummary } from "./schedulerHelpers.js";
@@ -33,6 +34,31 @@ app.post("/a2a/agent/devTrackerAgent", async (req, res) => {
     const channelId = metadata?.channelId || process.env.DEFAULT_CHANNEL_ID;
     const userId = metadata?.userId;
 
+    // Issue commands
+    if (lower.startsWith("issue ")) {
+      const title = input.replace(/issue /i, "").trim();
+      if (title) {
+        const reply = IssuesService.addIssue(channelId, title);
+        return res.json({ output: reply });
+      }
+    }
+    if (lower.includes("show issues")) {
+      const reply = IssuesService.showIssues(channelId);
+      return res.json({ output: reply });
+    }
+    if (lower.startsWith("resolve issue ")) {
+      const title = input.replace(/resolve issue /i, "").trim();
+      if (title) {
+        const reply = IssuesService.resolveIssue(channelId, title);
+        return res.json({ output: reply });
+      }
+    }
+    if (lower.includes("delete all resolved issues")) {
+      const reply = IssuesService.deleteResolvedIssues(channelId);
+      return res.json({ output: reply });
+    }
+
+    // Task commands
     // Natural language parsing for delete commands
     if (lower.includes("delete") && (lower.includes("all") || lower.includes("completed") || lower.includes("done"))) {
       const reply = AgentLogic.deleteCompletedTasks(channelId, userId);
@@ -72,10 +98,6 @@ app.post("/a2a/agent/devTrackerAgent", async (req, res) => {
       return res.json({ output: reply });
     }
 
-    // If message looks like an issue report, detect and log
-    const issueResp = AgentLogic.detectIssue(input);
-    if (issueResp) return res.json({ output: issueResp });
-
     // If no local command matched -> optionally forward to external Mastra agent if configured
     const systemPrompt = process.env.SYSTEM_PROMPT;
     const external = await callMastraExternal(input, systemPrompt, metadata);
@@ -114,6 +136,28 @@ async function fetchLocalA2A(input: string, metadata: any) {
   const lower = String(input).trim().toLowerCase();
   const channelId = metadata?.channelId || process.env.DEFAULT_CHANNEL_ID;
   const userId = metadata?.userId;
+
+  // Issue commands
+  if (lower.startsWith("issue ")) {
+    const title = input.replace(/issue /i, "").trim();
+    if (title) {
+      return { output: IssuesService.addIssue(channelId, title) };
+    }
+  }
+  if (lower.includes("show issues")) {
+    return { output: IssuesService.showIssues(channelId) };
+  }
+  if (lower.startsWith("resolve issue ")) {
+    const title = input.replace(/resolve issue /i, "").trim();
+    if (title) {
+      return { output: IssuesService.resolveIssue(channelId, title) };
+    }
+  }
+  if (lower.includes("delete all resolved issues")) {
+    return { output: IssuesService.deleteResolvedIssues(channelId) };
+  }
+
+  // Task commands
   if (lower.startsWith("add task")) {
     const title = input.replace(/add task/i, "").trim();
     return { output: AgentLogic.addTask(title, undefined, channelId, userId) };
@@ -147,8 +191,6 @@ async function fetchLocalA2A(input: string, metadata: any) {
   if (lower.includes("summary")) {
     return { output: AgentLogic.generateDailySummary(channelId) };
   }
-  const issueResp = AgentLogic.detectIssue(input);
-  if (issueResp) return { output: issueResp };
 
   // If external Mastra exists, call it
   const external = await callMastraExternal(input, process.env.SYSTEM_PROMPT, metadata);

@@ -8,3 +8,12 @@ export type Task = {
   created_at: string;
   updated_at: string;
 };
+
+export type Issue = {
+  id: number;
+  description: string;
+  severity: string;
+  channel_id?: string;
+  status: string;
+  detected_at: string;
+};

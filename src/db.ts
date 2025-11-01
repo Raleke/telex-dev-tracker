@@ -28,6 +28,8 @@ export function migrate() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       description TEXT NOT NULL,
       severity TEXT DEFAULT 'medium',
+      channel_id TEXT,
+      status TEXT DEFAULT 'open',
       detected_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS summaries (
