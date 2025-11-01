@@ -17,8 +17,8 @@ const PORT = parseInt(process.env.PORT || "8080", 10);
 const app = express();
 app.use(bodyParser.json());
 
-// Health
-app.get("/", (_req, res) => res.send("telex-dev-tracker: healthy"));
+// Root endpoint with help message
+app.get("/", (_req, res) => res.json({ output: `Hi — I'm the DevTracker assistant. Try: "add task <title>", "mark <id|title> as done", "delete <id|title>", "delete all completed tasks", "show tasks", or "summary".` }));
 
 // Mastra A2A endpoint that Telex workflows / A2A nodes call
 app.post("/a2a/agent/devTrackerAgent", async (req, res) => {
