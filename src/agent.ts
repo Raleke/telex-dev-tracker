@@ -5,6 +5,23 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+// Simple in-memory cache with TTL
+const cache: { [key: string]: { data: string; expires: number } } = {};
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+function getCached(key: string): string | null {
+  const entry = cache[key];
+  if (entry && Date.now() < entry.expires) {
+    return entry.data;
+  }
+  delete cache[key];
+  return null;
+}
+
+function setCached(key: string, data: string) {
+  cache[key] = { data, expires: Date.now() + CACHE_TTL };
+}
+
 export const AgentLogic = {
   addTask: (title: string, labels?: string, channelId?: string, userId?: string) => {
     const db = getDb();
@@ -15,6 +32,10 @@ export const AgentLogic = {
   },
 
   listTasks: (filter?: { status?: string; channelId?: string; userId?: string }) : string => {
+    const cacheKey = `tasks_${filter?.channelId || 'global'}_${filter?.userId || 'all'}_${filter?.status || 'all'}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+
     const db = getDb();
     let query = `SELECT * FROM tasks`;
     const params: any[] = [];
@@ -37,9 +58,15 @@ export const AgentLogic = {
     query += ` ORDER BY id DESC`;
     const rows = db.prepare(query).all(...params);
     db.close();
-    if (!rows.length) return "No tasks found.";
+    if (!rows.length) {
+      const result = "No tasks found.";
+      setCached(cacheKey, result);
+      return result;
+    }
     const lines = rows.map((r: any) => `#${r.id} • ${r.title} [${r.status}]`);
-    return lines.join("\n");
+    const result = lines.join("\n");
+    setCached(cacheKey, result);
+    return result;
   },
 
   markTask: (idOrText: string, status: string, channelId?: string, userId?: string) : string => {
@@ -133,9 +160,45 @@ export const AgentLogic = {
     const tasks = db.prepare(taskQuery).all(...params);
     const issues = db.prepare(`SELECT severity, COUNT(*) as count FROM issues GROUP BY severity`).all();
     const now = new Date().toISOString();
-    const taskLines = tasks.map((r: any) => `${r.count} ${r.status}`).join(", ") || "no tasks";
-    const issueLines = issues.map((r: any) => `${r.count} ${r.severity}`).join(", ") || "no issues";
-    const summary = `🗓️ Daily Summary (${now.split("T")[0]}): Tasks — ${taskLines}. Issues — ${issueLines}.`;
+    const date = now.split("T")[0];
+
+    // Structured summary
+    let summary = `🗓️ **Daily Developer Summary** (${date})\n\n`;
+
+    // Tasks section
+    summary += `**📋 Tasks Overview:**\n`;
+    if (tasks.length > 0) {
+      tasks.forEach((r: any) => {
+        summary += `  • ${r.count} ${r.status}\n`;
+      });
+    } else {
+      summary += `  • No tasks recorded\n`;
+    }
+
+    // Issues section
+    summary += `\n**🚨 Issues by Severity:**\n`;
+    const severityOrder = ['critical', 'high', 'medium', 'low'];
+    let hasIssues = false;
+    severityOrder.forEach(sev => {
+      const issue = (issues as any[]).find((i: any) => i.severity === sev);
+      if (issue) {
+        summary += `  • ${issue.count} ${sev}\n`;
+        hasIssues = true;
+      }
+    });
+    if (!hasIssues) {
+      summary += `  • No issues recorded\n`;
+    }
+
+    // Recent activity
+    const recentTasks = db.prepare(`SELECT title, status FROM tasks WHERE created_at >= ? ORDER BY created_at DESC LIMIT 5`).all(`${date}T00:00:00.000Z`);
+    if (recentTasks.length > 0) {
+      summary += `\n**🔄 Recent Tasks:**\n`;
+      recentTasks.forEach((t: any) => {
+        summary += `  • "${t.title}" [${t.status}]\n`;
+      });
+    }
+
     db.prepare(`INSERT INTO summaries (channel_id, summary, created_at) VALUES (?, ?, ?)`).run(channelId || null, summary, now);
     db.close();
     return summary;

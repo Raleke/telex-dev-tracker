@@ -3,12 +3,14 @@ import type { Issue } from "../types.js";
 
 function detectSeverity(title: string): string {
   const lower = title.toLowerCase();
-  if (lower.includes("crash") || lower.includes("fail") || lower.includes("error") || lower.includes("down")) {
+  if (lower.includes("crash") || lower.includes("panic") || lower.includes("down") || lower.includes("fatal")) {
     return "critical";
-  } else if (lower.includes("bug") || lower.includes("exception") || lower.includes("failed")) {
+  } else if (lower.includes("error") || lower.includes("exception") || lower.includes("fail")) {
+    return "high";
+  } else if (lower.includes("bug") || lower.includes("warning") || lower.includes("issue")) {
     return "medium";
   } else {
-    return "minor";
+    return "low";
   }
 }
 
@@ -27,8 +29,30 @@ export const IssuesService = {
     const rows = db.prepare(`SELECT * FROM issues WHERE channel_id = ? ORDER BY id DESC`).all(channelId) as Issue[];
     db.close();
     if (!rows.length) return "No issues found.";
-    const lines = rows.map((r) => `#${r.id} • ${r.description} [${r.severity}] [${r.status}]`);
-    return lines.join("\n");
+
+    // Group issues by severity
+    const grouped: { critical: Issue[]; high: Issue[]; medium: Issue[]; low: Issue[] } = { critical: [], high: [], medium: [], low: [] };
+    rows.forEach(issue => {
+      const sev = issue.severity;
+      if (sev in grouped) {
+        grouped[sev as keyof typeof grouped].push(issue);
+      } else {
+        grouped.low.push(issue); // fallback
+      }
+    });
+
+    const sections: string[] = [];
+    for (const severity of ['critical', 'high', 'medium', 'low'] as const) {
+      const issues = grouped[severity];
+      if (issues && issues.length > 0) {
+        sections.push(`**${severity.toUpperCase()}** (${issues.length}):`);
+        issues.forEach(issue => {
+          sections.push(`  #${issue.id} • ${issue.description} [${issue.status}]`);
+        });
+      }
+    }
+
+    return sections.join("\n");
   },
 
   resolveIssue: (channelId: string, title: string): string => {

@@ -1,0 +1,58 @@
+{
+  "id": "dev-tracker-workflow",
+  "name": "Dev Tracker Workflow",
+  "description": "A workflow to interact with the Telex Dev Tracker agent for managing development tasks, issues, and summaries.",
+  "steps": [
+    {
+      "id": "call-dev-tracker-agent",
+      "name": "Call Dev Tracker Agent",
+      "type": "agent",
+      "config": {
+        "url": "https://telex-dev-tracker-production.up.railway.app/a2a/agent/devTrackerAgent",
+        "method": "POST",
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "body": {
+          "input": "{{input}}",
+          "metadata": {
+            "channelId": "{{channelId}}",
+            "userId": "{{userId}}"
+          }
+        },
+        "outputPath": "output"
+      }
+    }
+  ],
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "input": {
+        "type": "string",
+        "description": "The command or message to send to the Dev Tracker agent (e.g., 'add task Fix bug', 'show tasks', 'summary')"
+      },
+      "channelId": {
+        "type": "string",
+        "description": "The channel ID for scoping tasks and issues"
+      },
+      "userId": {
+        "type": "string",
+        "description": "The user ID for scoping tasks"
+      }
+    },
+    "required": ["input"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "output": {
+        "type": "string",
+        "description": "The response from the Dev Tracker agent"
+      },
+      "actions": {
+        "type": "array",
+        "description": "Any additional actions returned by the agent"
+      }
+    }
+  }
+}

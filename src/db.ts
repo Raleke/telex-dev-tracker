@@ -39,6 +39,19 @@ export function migrate() {
       created_at TEXT NOT NULL
     );
   `);
+
+  // Add missing columns if they don't exist
+  try {
+    db.exec(`ALTER TABLE issues ADD COLUMN channel_id TEXT;`);
+  } catch (e) {
+    // Column might already exist
+  }
+  try {
+    db.exec(`ALTER TABLE issues ADD COLUMN status TEXT DEFAULT 'open';`);
+  } catch (e) {
+    // Column might already exist
+  }
+
   logger.info("DB migrated / ensured tables exist");
   db.close();
 }
