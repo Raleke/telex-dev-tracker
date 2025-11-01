@@ -1,0 +1,89 @@
+## Dependencies
+
+- **Runtime**: express, better-sqlite3, axios, cron, dotenv, pino, zod
+- **Mastra**: @mastra/core, @mastra/libsql, @mastra/loggers, @mastra/memory
+- **Development**: typescript, ts-node, @types/node, @types/express, @types/better-sqlite3, @types/cron
+ 
+## License
+ 
+
+
+
+## Development
+
+- **Build**: `npm run build` - Compiles TypeScript to JavaScript.
+- **Development**: `npm run dev` - Runs with ts-node for hot reloading.
+- **Testing**: `npm test` - Run tests (currently placeholder).
+ 
+## 
+ 
+## Project Structure
+
+```
+telex-dev-tracker/
+├── src/
+│   ├── index.ts              # Main server file
+│   ├── agent.ts              # Task management logic
+│   ├── db.ts                 # Database operations
+│   ├── logger.ts             # Logging utilities
+│   ├── mastraClient.ts       # External Mastra agent client
+│ 
+ 
+  ├── scheduler.ts          # Cron job scheduling
+│   ├── schedulerHelpers.ts   # Summary generation helpers
+│   ├── summarize.ts          # Summarization logic
+│   ├── telexClient.ts        # Telex API client
+│   ├── types.ts              
+│   └── mastra/               
+│       ├── index.ts
+│       ├── agents/
+│       ├── tools/
+│       └── workflows/
+├── data/                     # Database files
+├── Dockerfile                # Docker configuration
+├── .dockerignore             # Docker ignore file
+├── package.json              # Node.js dependencies
+├── tsconfig.json             # TypeScript configuration
+├── .gitignore                # Git ignore rules
+└── README.md                 # This file
+```
+ 
+# TypeScript type definitions
+ 
+# Mastra AI components
+ 
+### 
+ 
+#### 
+ 
+#### 
+ 
+#### 
+ 
+#### 
+ 
+#### 
+ 
+### 
+ 
+## 
+ 
+## 
+ 
+  // ensure dir exists
+ 
+/ enable foreign_key
+ 
+
+# System prompt used when delegating to Mastra or local LLM adapter
+ 
+
+# Scheduler cron expression for daily summary (default: every day at 09:00)
+ 
+
+# Where SQLite DB file will be stored
+ 
+
+# If you want the agent to proactively POST summaries to Telex (optional)
+# Example: https://api.telex.im/agent-... or your forwarding endpoint
+ 
