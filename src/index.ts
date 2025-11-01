@@ -114,11 +114,14 @@ app.post("/webhook/telex", async (req, res) => {
 
 async function fetchLocalA2A(input: string, metadata: any) {
   // Reuse logic in the main a2a route without HTTP call
+  console.log("fetchLocalA2A called with input:", input, "metadata:", JSON.stringify(metadata, null, 2));
   const lower = String(input).trim().toLowerCase();
   const channelId = metadata?.channelId || process.env.DEFAULT_CHANNEL_ID;
   const userId = metadata?.userId;
+  console.log("Lower input:", lower);
   if (lower.startsWith("add task")) {
     const title = input.replace(/add task/i, "").trim();
+    console.log("Matched add task, title:", title);
     return { output: AgentLogic.addTask(title, undefined, channelId, userId) };
   }
   if (lower.startsWith("mark")) {
