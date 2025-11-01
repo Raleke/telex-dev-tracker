@@ -104,3 +104,6 @@ Thumbs.db
 # Temporary files
 tmp/
 temp/
+
+# Trash bin file
+trashbin.txt
