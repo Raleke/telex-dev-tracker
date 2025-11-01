@@ -97,8 +97,11 @@ app.post("/webhook/telex", async (req, res) => {
   // For compatibility, handle the incoming message shape Telex uses
   try {
     const incoming = req.body;
-    const text = incoming.text || incoming.body?.text || "";
-    const metadata = { channelId: incoming.channelId || incoming.metadata?.channelId || incoming.from?.id, userId: incoming.userId || incoming.metadata?.userId };
+    console.log("Received webhook body:", JSON.stringify(incoming, null, 2));
+    const text = incoming.input || incoming.text || incoming.body?.text || "";
+    const metadata = incoming.metadata || { channelId: incoming.channelId || incoming.from?.id, userId: incoming.userId };
+    console.log("Extracted text:", text);
+    console.log("Extracted metadata:", JSON.stringify(metadata, null, 2));
     // reuse same logic by forwarding to the A2A handler shape
     // simple call:
     const proxyRes = await fetchLocalA2A(text, metadata);
