@@ -3,5 +3,14 @@ dist
 .git
 .gitignore
 Dockerfile
+.dockerignore
 npm-debug.log
 data.json
+.env
+README.md
+README.MD
+TODO.md
+trashbin.txt
+*.log
+*.md
+!README.md

@@ -19,6 +19,14 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine AS production
 
+# Add metadata labels
+LABEL maintainer="telex-dev-tracker"
+LABEL version="1.0.0"
+LABEL description="Telex Dev Tracker - A development tracking assistant bot"
+
+# Create a non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+
 # Set working directory inside the container
 WORKDIR /app
 
@@ -26,16 +34,24 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 
 # Install production dependencies only
-RUN npm ci --production --legacy-peer-deps
+RUN npm ci --production --legacy-peer-deps && npm cache clean --force
 
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
+
+# Change ownership to non-root user
+RUN chown -R nodejs:nodejs /app
+USER nodejs
 
 # Expose port for the app
 EXPOSE 8080
 
 # Define environment variables
 ENV NODE_ENV=production
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:8080/', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
 
 # Start the app
 CMD ["node", "dist/index.js"]
