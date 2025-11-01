@@ -1,5 +1,6 @@
 import { getDb } from "./db.js";
 import type { Task } from "./types.js";
+import { logger } from "./logger.js";
 
 function nowIso() {
   return new Date().toISOString();
@@ -148,60 +149,83 @@ export const AgentLogic = {
 
 
 
-  generateDailySummary: (channelId?: string) => {
-    const db = getDb();
-    let taskQuery = `SELECT status, COUNT(*) as count FROM tasks`;
-    const params: any[] = [];
-    if (channelId) {
-      taskQuery += ` WHERE channel_id = ?`;
-      params.push(channelId);
-    }
-    taskQuery += ` GROUP BY status`;
-    const tasks = db.prepare(taskQuery).all(...params);
-    const issues = db.prepare(`SELECT severity, COUNT(*) as count FROM issues GROUP BY severity`).all();
-    const now = new Date().toISOString();
-    const date = now.split("T")[0];
-
-    // Structured summary
-    let summary = `🗓️ **Daily Developer Summary** (${date})\n\n`;
-
-    // Tasks section
-    summary += `**📋 Tasks Overview:**\n`;
-    if (tasks.length > 0) {
-      tasks.forEach((r: any) => {
-        summary += `  • ${r.count} ${r.status}\n`;
-      });
-    } else {
-      summary += `  • No tasks recorded\n`;
-    }
-
-    // Issues section
-    summary += `\n**🚨 Issues by Severity:**\n`;
-    const severityOrder = ['critical', 'high', 'medium', 'low'];
-    let hasIssues = false;
-    severityOrder.forEach(sev => {
-      const issue = (issues as any[]).find((i: any) => i.severity === sev);
-      if (issue) {
-        summary += `  • ${issue.count} ${sev}\n`;
-        hasIssues = true;
+  generateDailySummary: async (channelId?: string): Promise<string> => {
+    try {
+      const db = getDb();
+      let taskQuery = `SELECT status, COUNT(*) as count FROM tasks`;
+      const params: any[] = [];
+      if (channelId) {
+        taskQuery += ` WHERE channel_id = ?`;
+        params.push(channelId);
       }
-    });
-    if (!hasIssues) {
-      summary += `  • No issues recorded\n`;
-    }
+      taskQuery += ` GROUP BY status`;
+      const tasks = db.prepare(taskQuery).all(...params);
+      const issues = db.prepare(`SELECT resolved, severity, COUNT(*) as count FROM issues GROUP BY resolved, severity`).all();
+      const now = new Date().toISOString();
+      const date = now.split("T")[0];
 
-    // Recent activity
-    const recentTasks = db.prepare(`SELECT title, status FROM tasks WHERE created_at >= ? ORDER BY created_at DESC LIMIT 5`).all(`${date}T00:00:00.000Z`);
-    if (recentTasks.length > 0) {
-      summary += `\n**🔄 Recent Tasks:**\n`;
-      recentTasks.forEach((t: any) => {
-        summary += `  • "${t.title}" [${t.status}]\n`;
-      });
-    }
+      // Structured summary
+      let summary = `🗓️ **Daily Developer Summary** (${date})\n\n`;
 
-    db.prepare(`INSERT INTO summaries (channel_id, summary, created_at) VALUES (?, ?, ?)`).run(channelId || null, summary, now);
-    db.close();
-    return summary;
+      // Tasks section
+      summary += `**📋 Tasks Overview:**\n`;
+      if (tasks.length > 0) {
+        tasks.forEach((r: any) => {
+          summary += `  • ${r.count} ${r.status}\n`;
+        });
+      } else {
+        summary += `  • No tasks recorded\n`;
+      }
+
+      // Issues section
+      summary += `\n**🚨 Issues Overview:**\n`;
+      const openIssues = (issues as any[]).filter((i: any) => i.resolved === 0);
+      const resolvedIssues = (issues as any[]).filter((i: any) => i.resolved === 1);
+      const totalOpen = openIssues.reduce((sum, i) => sum + i.count, 0);
+      const totalResolved = resolvedIssues.reduce((sum, i) => sum + i.count, 0);
+
+      summary += `  • ${totalOpen} open issues\n`;
+      summary += `  • ${totalResolved} resolved issues\n`;
+
+      if (totalOpen > 0) {
+        summary += `\n**Open Issues by Severity:**\n`;
+        const severityOrder = ['critical', 'high', 'medium', 'low'];
+        severityOrder.forEach(sev => {
+          const issue = openIssues.find((i: any) => i.severity === sev);
+          if (issue) {
+            summary += `  • ${issue.count} ${sev}\n`;
+          }
+        });
+      }
+
+      // Latest resolution dates
+      if (totalResolved > 0) {
+        const latestResolved = db.prepare(`SELECT description, resolved_at FROM issues WHERE resolved = 1 ORDER BY resolved_at DESC LIMIT 3`).all() as any[];
+        if (latestResolved.length > 0) {
+          summary += `\n**🕒 Latest Resolutions:**\n`;
+          latestResolved.forEach((r: any) => {
+            const dateStr = new Date(r.resolved_at).toLocaleDateString();
+            summary += `  • ${r.description.split('\n')[0]} (${dateStr})\n`;
+          });
+        }
+      }
+
+      // Recent activity
+      const recentTasks = db.prepare(`SELECT title, status FROM tasks WHERE created_at >= ? ORDER BY created_at DESC LIMIT 5`).all(`${date}T00:00:00.000Z`);
+      if (recentTasks.length > 0) {
+        summary += `\n**🔄 Recent Tasks:**\n`;
+        recentTasks.forEach((t: any) => {
+          summary += `  • "${t.title}" [${t.status}]\n`;
+        });
+      }
+
+      db.prepare(`INSERT INTO summaries (channel_id, summary, created_at) VALUES (?, ?, ?)`).run(channelId || null, summary, now);
+      db.close();
+      return summary;
+    } catch (error) {
+      logger.error(`Failed to generate daily summary: ${error}`);
+      throw new Error("Failed to generate summary");
+    }
   },
 
   getSummaries: (limit = 10) => {

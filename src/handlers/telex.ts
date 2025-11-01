@@ -13,23 +13,23 @@ export async function handleTelexWebhook(input: string, metadata: any): Promise<
   if (/^issue\s+/i.test(input)) {
     const title = input.replace(/^issue\s+/i, "").trim();
     if (title) {
-      const reply = IssuesService.addIssue(channelId, title);
+      const reply = await IssuesService.addIssue(channelId, title);
       return { output: reply };
     }
   }
   if (/^show\s+issues$/i.test(lower)) {
-    const reply = IssuesService.showIssues(channelId);
+    const reply = await IssuesService.showIssues(channelId);
     return { output: reply };
   }
   if (/^resolve\s+issue\s+/i.test(input)) {
     const title = input.replace(/^resolve\s+issue\s+/i, "").trim();
     if (title) {
-      const reply = IssuesService.resolveIssue(channelId, title);
+      const reply = await IssuesService.resolveIssue(channelId, title);
       return { output: reply };
     }
   }
   if (/^delete\s+all\s+resolved\s+issues$/i.test(lower)) {
-    const reply = IssuesService.deleteResolvedIssues(channelId);
+    const reply = await IssuesService.deleteResolvedIssues(channelId);
     return { output: reply };
   }
 
@@ -68,7 +68,7 @@ export async function handleTelexWebhook(input: string, metadata: any): Promise<
     return { output: reply };
   }
   if (/^(summary|daily\s+summary|show\s+summary)$/i.test(lower)) {
-    const reply = AgentLogic.generateDailySummary(channelId);
+    const reply = await AgentLogic.generateDailySummary(channelId);
     return { output: reply };
   }
 

@@ -29,7 +29,8 @@ export function migrate() {
       description TEXT NOT NULL,
       severity TEXT DEFAULT 'medium',
       channel_id TEXT,
-      status TEXT DEFAULT 'open',
+      resolved INTEGER DEFAULT 0,
+      resolved_at TEXT,
       detected_at TEXT NOT NULL
     );
     CREATE TABLE IF NOT EXISTS summaries (
@@ -47,9 +48,26 @@ export function migrate() {
     // Column might already exist
   }
   try {
-    db.exec(`ALTER TABLE issues ADD COLUMN status TEXT DEFAULT 'open';`);
+    db.exec(`ALTER TABLE issues ADD COLUMN resolved INTEGER DEFAULT 0;`);
   } catch (e) {
     // Column might already exist
+  }
+  try {
+    db.exec(`ALTER TABLE issues ADD COLUMN resolved_at TEXT;`);
+  } catch (e) {
+    // Column might already exist
+  }
+  // Migrate existing status to resolved
+  try {
+    db.exec(`UPDATE issues SET resolved = CASE WHEN status = 'resolved' THEN 1 ELSE 0 END WHERE resolved = 0;`);
+  } catch (e) {
+    // Migration might have been done already
+  }
+  // Drop old status column if exists
+  try {
+    db.exec(`ALTER TABLE issues DROP COLUMN status;`);
+  } catch (e) {
+    // Column might not exist or already dropped
   }
 
   logger.info("DB migrated / ensured tables exist");

@@ -14,6 +14,7 @@ export type Issue = {
   description: string;
   severity: string;
   channel_id?: string;
-  status: string;
+  resolved: number;
+  resolved_at?: string;
   detected_at: string;
 };
