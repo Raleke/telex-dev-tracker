@@ -3,7 +3,7 @@ import path from "path";
 import * as fs from "fs";
 import { logger } from "./logger.js";
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "data", "dev-tracker.db");
+const DB_PATH = path.join(process.cwd(), "data", "dev-tracker.db");
 export function getDb(): Database.Database {
   const dir = path.dirname(DB_PATH);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

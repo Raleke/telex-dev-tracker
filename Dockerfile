@@ -30,17 +30,28 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 # Set working directory inside the container
 WORKDIR /app
 
+# Change ownership of /app to nodejs user
+RUN chown -R nodejs:nodejs /app
+
 # Copy dependency manifests
 COPY package.json package-lock.json* ./
+
+# Switch to nodejs user for dependency installation
+USER nodejs
 
 # Install production dependencies only
 RUN npm ci --production --legacy-peer-deps && npm cache clean --force
 
+# Switch back to root for copying built files
+USER root
+
 # Copy built files from builder stage
 COPY --from=builder /app/dist ./dist
 
-# Change ownership to non-root user
-RUN chown -R nodejs:nodejs /app
+# Change ownership of dist directory only to non-root user
+RUN chown -R nodejs:nodejs /app/dist
+
+# Switch back to nodejs user
 USER nodejs
 
 # Expose port for the app
