@@ -8,7 +8,7 @@ function detectSeverity(title: string): string {
   } else if (lower.includes("bug") || lower.includes("exception") || lower.includes("failed")) {
     return "medium";
   } else {
-    return "low";
+    return "minor";
   }
 }
 
