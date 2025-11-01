@@ -118,6 +118,10 @@ async function fetchLocalA2A(input: string, metadata: any) {
     const title = input.replace(/add task/i, "").trim();
     return { output: AgentLogic.addTask(title, undefined, channelId, userId) };
   }
+  if (lower.startsWith("add ")) {
+    const title = input.replace(/add /i, "").trim();
+    return { output: AgentLogic.addTask(title, undefined, channelId, userId) };
+  }
   if (lower.startsWith("mark")) {
     const asMatch = input.match(/mark\s+(.+)\s+as\s+(\w+)/i);
     if (asMatch) {
